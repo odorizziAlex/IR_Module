@@ -1,4 +1,3 @@
-##https://www.youtube.com/watch?v=ZBLYcvPl1MA
 from __future__ import print_function
 from AppKit import NSWorkspace
 from Foundation import *
