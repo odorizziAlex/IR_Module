@@ -1,5 +1,6 @@
 //Kopieren Sie diese Skripts und fügen Sie sie am unteren Ende des Tags <body> ein. Beachten Sie jedoch folgendes, bevor Sie Firebase-Dienste verwenden:
 
+
 // <!-- The core Firebase JS SDK is always required and must be listed first -->
 // <script src="https://www.gstatic.com/firebasejs/8.2.3/firebase-app.js"></script>
 

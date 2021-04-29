@@ -113,6 +113,8 @@ void updateCodeChunkIndexTransm(unsigned int n)
     // module, which stops further transmission
     if (chunkIndex > totalChunkNumber - 1)
     {
+        //TESTING
+        updateMeasurementMain();
         moduleResponseToHost();
         return;
     }

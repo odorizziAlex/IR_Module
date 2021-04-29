@@ -374,5 +374,4 @@ boolean correctSequence(int * data){
     else if(errorPos == 0 && checkP6(data))
         return true;
     performErrorCorrection(errorPos, data);
-    return true;
 }

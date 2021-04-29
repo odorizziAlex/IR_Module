@@ -10,6 +10,9 @@ enum recvState
     LISTENING
 };
 
+//TESTING
+boolean calibrateRecv;
+
 int superStateRecv = 0;
 
 double startBurstDurationInterval[2];
@@ -49,6 +52,9 @@ boolean transmissionInitialized = false;
 boolean toggle = false;
 boolean isSignalPassed = false;
 
+//TESTING
+unsigned int logCounter = 0;
+
 void resetSequenceData()
 {
     for (int i = 0; i < msgBitNumber; i++)
@@ -57,10 +63,11 @@ void resetSequenceData()
     errorCounter = 0;
 }
 
-void initReceiver(const double *startBrstDInterval, const double *startPsDInterval,
+void initReceiver(boolean calibrate, const double *startBrstDInterval, const double *startPsDInterval,
                   const double *endBrstDInterval, const double *oneBrstDInterval,
                   const double *zeroBrstDInterval, const unsigned int timeoutThreshold)
 {
+    calibrateRecv = calibrate;
     startBurstDurationInterval[0] = startBrstDInterval[0];
     startBurstDurationInterval[1] = startBrstDInterval[1];
     startPauseDurationInterval[0] = startPsDInterval[0];
@@ -72,6 +79,7 @@ void initReceiver(const double *startBrstDInterval, const double *startPsDInterv
     zeroBurstDurationInterval[0] = zeroBrstDInterval[0];
     zeroBurstDurationInterval[1] = zeroBrstDInterval[1];
     maximumTimeoutDuration = timeoutThreshold;
+    //?
     resetSequenceData();
 }
 
@@ -196,7 +204,10 @@ void initTransmission(unsigned int incomingSequence)
     {
         unsigned int incomingChunkNumber = decodeSequence(sequences[codeChunkIndex], startChunkBitNumber);
         if (incomingChunkNumber <= maxChunkNumber)
-        {            
+        {
+            //TESTING
+            updateTransmissionTimer();
+            
             chunkNumber = incomingChunkNumber;
             updateSuperStateMain(RECEIVER);
             transmissionInitialized = true;
@@ -215,6 +226,8 @@ void receiveData(unsigned int incomingSequence)
     {
         if (superStateRecv == SENDER)
             moduleResponseToHost();
+        //TESTING
+        updateMeasurementMain();
     }
     else if (incomingSequence == NEXT_PKT)
     {
@@ -258,6 +271,7 @@ void receiveData(unsigned int incomingSequence)
 void analyzeSequence()
 {
     unsigned int incomingSequence = checkIfCommandIncomming();
+    loggerMain(incomingSequence);
     if (incomingSequence == CMD_NOT_FOUND_ERROR)
     {
         sendResponse(REPEAT);
@@ -338,6 +352,13 @@ void identifyStartPause()
     if (startSignal == true)
     {
         int pauseDuration = micros() - startBurstTimer;
+        //TESTING
+        if (calibrateRecv)
+        {
+            Serial.print(pauseDuration);
+            Serial.print(";");
+        }
+
         if (pauseDuration >= startPauseDurationInterval[0] && pauseDuration <= startPauseDurationInterval[1])
         {
             recvState = LISTENING;
@@ -353,6 +374,8 @@ void checkSequenceTimeout()
 {
     if (recvState == LISTENING && micros() >= startReceiverTimestamp + maximumTimeoutDuration)
     {
+        //TESTING
+        loggerMain(187);
         recvState = WAITING;
         resetSequenceData();
         sendResponse(REPEAT);
@@ -364,6 +387,8 @@ void processData()
 {
     isSignalPassed = true;
     boolean dataReceived = true;
+    //TESTING
+    updateMeasurementMain();
     fillBufferInMain(chunkNumber, finalSequences, dataReceived);
     moduleResponseToHost();
 }
@@ -391,6 +416,12 @@ void receiveIRCode(int incomingBit)
         {
             toggle = false;
             int burstDuration = micros() - startBurstTimer;
+            //TESTING
+            if (calibrateRecv)
+            {
+                Serial.print(burstDuration);
+                Serial.print(";");
+            }
             identifyStartBurst(burstDuration);
             if (recvState == LISTENING)
                 evaluateSignal(burstDuration);

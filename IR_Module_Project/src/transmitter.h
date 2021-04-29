@@ -14,4 +14,7 @@ void updateResponseTimer();
 
 void resetTransmitter();
 
+//TESTING
+void updateMeasurementMain();
+
 void moduleResponseToHost();

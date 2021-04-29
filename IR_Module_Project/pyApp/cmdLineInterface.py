@@ -24,6 +24,7 @@ import threading
 import random
 import sys
 import webbrowser
+from datetime import datetime
 import readline
 import requests
 
@@ -117,7 +118,6 @@ class DBHandler:
         self.storage = firebase.storage()
         self.path_on_cloud = "images/"+self.imgName
         self.path_local = "./imageStorage/images/"+self.imgName
-        print("<< Online cloud connected.")
 
 # Functionality of this class is based on Kalle Halldens project called "AutoTimer".
 # Source: https://github.com/KalleHallden/AutoTimer
@@ -174,10 +174,10 @@ class Capturer:
         windowList = CGWindowListCopyWindowInfo(kCGWindowListOptionAll, kCGNullWindowID)
         images = []
         index = 0
-        referenceType = None
         for window in windowList:
             if 'kCGWindowOwnerName' in window and 'kCGWindowIsOnscreen' in window:
                 if windowName.lower() == window['kCGWindowOwnerName'].lower() and window['kCGWindowIsOnscreen'] == 1:
+                    
                     if 'kCGWindowName' in window and window['kCGWindowName'] == "":
                         continue
 
@@ -191,12 +191,8 @@ class Capturer:
                     images.append(image)
                     for img in images: 
                         img.save("./imageStorage/images/activeWindowScreenshot"+str(index)+".png")
-                        referenceType = img
-        if(referenceType == None):
-            return "https://google.com/search?q=IR+Module+Capturer+Error:+Unable+capture+window+of+other+computer..."
-            
-        return referenceType
 
+        return img
 
     def openURL(self, url):
         webbrowser.get().open(url)
@@ -213,6 +209,7 @@ class ThreadHandler(threading.Thread):
         self.superClass = superClass
 
     def run(self):
+        # print("init thread; id:",self.threadID,"name:",self.name)
         if self.threadID == 1:
             self.superClass.stopSerialThread = False
             self.superClass.awaitIncomingIRData()
@@ -224,12 +221,37 @@ class ThreadHandler(threading.Thread):
         else: 
             raise Exception("Thread Handler: Thread Id not found:",self.threadID,"name:",self.name)
 
+#TESTING
+class TimeMeasurement():
+    def __init__(self, parent=None):
+        self.timestamp = 0
+        self.measuring = False
+
+    def getFormattedTime(self):
+        time = str(str(datetime.now()).split(" ")[1]).split(":")
+        return float(time[1])*60 + float(time[2])
+
+    def setMeasuring(self,booleanValue):
+        self.measuring = booleanValue
+
+    def setTimestamp(self):
+        if self.measuring == False:
+            time = str(str(datetime.now()).split(" ")[1]).split(":")
+            self.timestamp = float(time[1])*60 + float(time[2])
+    
+    def getTimeStampValue(self):
+        return self.timestamp
+
+    def getPassedTime(self):
+        return self.getFormattedTime()-self.timestamp
+
 class main():
     def __init__(self,parent=None):
         self.cap = Capturer()
         self.wif = WifiHandler()
         self.db = DBHandler()
-
+        #TESTING
+        self.timer = TimeMeasurement()
         # START IR Module communication variables 
         self.maxByteNumber = 251 # 765 would be the actual capacity of the IR Module. readBytesUntil() wont take more than 251 though...
         self.authorizationValue = 187
@@ -379,6 +401,7 @@ class main():
     # Interrupt user input to free admin password input
     def interruptInput(self):
         self.stopInputThread = True
+        self.timer.getPassedTime()
         print("<< Admin Password is needed. Press ENTER to continue.")
         self.userInputThread.join()
         self.userInputThread = None
@@ -438,6 +461,8 @@ class main():
             print()
             self.serialWrite(self.moduleResetCommand)
             self.initListener()
+        #TESTING
+        print(self.timer.getPassedTime())
 
     # Listening for data incoming commands by the IR Module.
     def awaitIncomingIRData(self):
@@ -446,6 +471,8 @@ class main():
             serialInput = self.cleanSerialInput(self.moduleSerialPortConnection.readline())
             # Only if the module indicates a successful reception of data, the serial input will be processed.
             if serialInput == self.moduleTransmissionSuccessCommand:
+                #TESTING
+                self.timer.setTimestamp()
                 print("<< Data Received! Loading...")
                 time.sleep(.01)
                 serialInput = self.cleanSerialInput(self.moduleSerialPortConnection.readline())
@@ -475,8 +502,11 @@ class main():
             elif userInput == self.manualResetIRModuleCmdLineCommand:
                 self.serialWrite(self.moduleResetCommand)
             else:
+                #TESTING
+                self.timer.setTimestamp()
                 self.stopSerialThread = True
                 self.waitForSerialThreadClose()
+                # self.serialWrite(self.moduleResetCommand)
                 self.upload(userInput)
 
     def waitForSerialThreadClose(self):
@@ -488,9 +518,11 @@ class main():
     def inspectContent(self,content):
         self.outputRequest = ""
         if content == "act()":
+        # if content == self.activityRequestInterfaceCommand:
             self.outputRequest = self.activityRequestInterfaceCommand
             content = self.activityRequestInterfaceCommand
         elif content == "wif()":
+        # elif content == self.wifiRequestInterfaceCommand:
             self.outputRequest = self.wifiRequestInterfaceCommand
             content = self.wifiRequestInterfaceCommand
         return content
@@ -510,6 +542,14 @@ class main():
         self.passDataToModule(content)
         # Initiates listener threads to listen for incoming IR commands or command line commands.
         self.initListener()
+
+# t = TimeMeasurement()
+# t.setTimestamp()
+
+# print(t.getFormattedTime())
+# time.sleep(2)
+# print(t.getFormattedTime())
+# print(t.getPassedTime())
 
 IRInterface = main()
 manual = [
